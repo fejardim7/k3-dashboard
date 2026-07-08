@@ -6,9 +6,9 @@
   --cinza: #3f3f3f;
   --branco: #ffffff;
 
-  --bg: var(--branco);
+  --bg: #e9ebf1;
   --card: var(--branco);
-  --card-border: #e2e5ef;
+  --card-border: #d9dce6;
   --text: var(--azul);
   --text-dim: #6b7490;
   --accent: var(--azul);
@@ -46,8 +46,7 @@ header.topbar {
   align-items: center;
   justify-content: space-between;
   padding: 0.7rem 2rem;
-  border-bottom: 1px solid var(--card-border);
-  background: var(--branco);
+  background: var(--azul);
   position: sticky;
   top: 0;
   z-index: 20;
@@ -60,9 +59,6 @@ header.topbar {
 }
 
 .logo-chip {
-  background: var(--azul);
-  border-radius: 10px;
-  padding: 0.55rem 0.9rem;
   display: flex;
   align-items: center;
   line-height: 0;
@@ -74,15 +70,15 @@ header.topbar {
 }
 
 .brand .subtitle {
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.72);
   font-size: 1rem;
   font-weight: 600;
 }
 
 .month-pill {
-  background: var(--azul);
-  color: var(--branco);
-  border: 1px solid var(--azul);
+  background: var(--branco);
+  color: var(--azul);
+  border: 1px solid var(--branco);
   padding: 0.35rem 1rem;
   border-radius: 999px;
   font-weight: 700;
@@ -93,8 +89,8 @@ header.topbar {
 .tabs {
   display: flex;
   gap: 0.4rem;
-  background: #f2f4f9;
-  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 0.3rem;
   border-radius: 12px;
 }
@@ -102,7 +98,7 @@ header.topbar {
 .tab-btn {
   border: none;
   background: transparent;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.75);
   font-size: 1rem;
   font-weight: 700;
   padding: 0.5rem 1.3rem;
@@ -112,13 +108,13 @@ header.topbar {
 }
 
 .tab-btn.active {
-  background: var(--azul);
-  color: var(--branco);
+  background: var(--branco);
+  color: var(--azul);
 }
 
 .clock-wrap {
   text-align: right;
-  color: var(--text-dim);
+  color: rgba(255, 255, 255, 0.65);
   font-size: 0.85rem;
   line-height: 1.3;
 }
@@ -126,7 +122,7 @@ header.topbar {
 .clock-wrap .clock {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text);
+  color: var(--branco);
 }
 
 /* ---------- Main ---------- */
