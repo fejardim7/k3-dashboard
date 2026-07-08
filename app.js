@@ -18,7 +18,15 @@ const REFRESH_MS = 5 * 60 * 1000; // 5 minutos
 const MESES_PT = { jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6, jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12 };
 const MESES_NOME = { 1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril", 5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto", 9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro" };
 
+/* K3 Investimentos — cores oficiais do Manual de Identidade Visual */
+const AZUL = "#1e2d54";
+const DOURADO = "#d1a771";
+
 let charts = {};
+
+if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
+Chart.defaults.color = AZUL;
+Chart.defaults.font.family = "Segoe UI, Inter, Roboto, Arial, sans-serif";
 
 /* ---------------- CSV fetch & parse ---------------- */
 
@@ -138,13 +146,14 @@ function deltaBadge(real, meta, invert = false) {
   const diff = real - meta;
   const good = invert ? diff <= 0 : diff >= 0;
   const cls = good ? "pos" : "neg";
+  const arrow = good ? "▲" : "▼";
   const sign = diff >= 0 ? "+" : "";
-  return `<span class="badge ${cls}">${sign}${fmtCompact.format(diff)} vs meta</span>`;
+  return `<span class="badge ${cls}">${arrow} ${sign}${fmtCompact.format(diff)} vs meta</span>`;
 }
 
 /* ---------------- Card builders ---------------- */
 
-function bigNumberCard({ label, value, valueStr, meta, metaStr, updated, invert = false, extraBadge = "" }) {
+function bigNumberCard({ label, value, valueStr, meta, metaStr, updated, invert = false, extraBadge = "", note = "" }) {
   const hasMeta = meta !== undefined && meta !== null;
   // For "invert" metrics (lower is better, e.g. Ruptura) a meta of 0 makes a realizado/meta
   // ratio meaningless, so the progress bar is skipped and only the delta badge is shown.
@@ -161,9 +170,10 @@ function bigNumberCard({ label, value, valueStr, meta, metaStr, updated, invert 
         ${hasMeta ? `<span>Meta: <strong style="color:var(--text)">${metaStr}</strong></span>` : ""}
         ${badge}
       </div>
+      ${note ? `<div class="kpi-meta-row" style="margin-top:0.2rem;">${note}</div>` : ""}
       ${showBar ? `
         <div class="progress-track"><div class="progress-fill" style="width:${Math.min(100, barWidth)}%"></div></div>
-        <div class="kpi-meta-row" style="margin-top:0.35rem;">${fmtPct(percent)} da meta atingido</div>
+        <div class="kpi-meta-row" style="margin-top:0.3rem;">${fmtPct(percent)} da meta atingido</div>
       ` : ""}
     </div>`;
 }
@@ -250,28 +260,52 @@ function renderCaptacao(rows, metasAssessor, dateMap) {
           <div class="rank-name">${r.nome}</div>
           <div class="rank-team">${r.equipe}</div>
         </div>
-        <div class="rank-value" style="color:${r.valor >= 0 ? "var(--green)" : "var(--red)"}">${fmtMoney(r.valor)}</div>
+        <div class="rank-value">${fmtMoney(r.valor)}</div>
       </div>`;
     })
     .join("");
 
-  // Chart: PF vs PJ % of total
-  renderChart("chartPfPj", "doughnut", {
+  // Chart: PF vs PJ (barras — valores podem ser negativos, então rosca fica deturpada)
+  renderChart("chartPfPj", "bar", {
     labels: ["PF", "PJ"],
-    datasets: [{ data: [Math.abs(capPF), Math.abs(capPJ)], backgroundColor: ["#60a5fa", "#d4af37"], borderWidth: 0 }],
+    datasets: [{ data: [capPF, capPJ], backgroundColor: [AZUL, DOURADO], borderRadius: 8 }],
   }, {
-    plugins: { legend: { position: "bottom", labels: { color: "#f2f3f7" } }, tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${fmtMoney(ctx.label === "PF" ? capPF : capPJ)}` } } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ` ${fmtMoneyFull(ctx.raw)}` } },
+      datalabels: {
+        color: AZUL,
+        font: { weight: "700", size: 13 },
+        anchor: "end",
+        align: (ctx) => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+        formatter: (v) => fmtMoney(v),
+      },
+    },
+    scales: {
+      y: { ticks: { color: "#6b7490", callback: (v) => fmtCompact.format(v) }, grid: { color: "#eef0f6" } },
+      x: { ticks: { color: AZUL, font: { weight: "700" } }, grid: { display: false } },
+    },
   });
 
   // Chart: PME/Middle vs Corporate
   renderChart("chartPjSplit", "bar", {
     labels: ["PME/Middle", "Corporate"],
-    datasets: [{ data: [pmeMiddle, corporate], backgroundColor: ["#a78bfa", "#34d399"], borderRadius: 8 }],
+    datasets: [{ data: [pmeMiddle, corporate], backgroundColor: [AZUL, DOURADO], borderRadius: 8 }],
   }, {
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${fmtMoneyFull(ctx.raw)}` } } },
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ` ${fmtMoneyFull(ctx.raw)}` } },
+      datalabels: {
+        color: AZUL,
+        font: { weight: "700", size: 13 },
+        anchor: "end",
+        align: (ctx) => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+        formatter: (v) => fmtMoney(v),
+      },
+    },
     scales: {
-      y: { ticks: { color: "#8b8fa3", callback: (v) => fmtCompact.format(v) }, grid: { color: "#1a1d29" } },
-      x: { ticks: { color: "#f2f3f7" }, grid: { display: false } },
+      y: { ticks: { color: "#6b7490", callback: (v) => fmtCompact.format(v) }, grid: { color: "#eef0f6" } },
+      x: { ticks: { color: AZUL, font: { weight: "700" } }, grid: { display: false } },
     },
   });
 }
@@ -279,7 +313,7 @@ function renderCaptacao(rows, metasAssessor, dateMap) {
 /* ---------------- View: KPIs ---------------- */
 
 function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
-  // Seguros
+  /* ---- Cross Sell: Seguros + Consórcio ---- */
   const r1 = sumBy(rows, "R1 Seguros");
   const r2 = sumBy(rows, "R2 Seguros");
   const metaR1 = sumBy(metasAssessor, "Meta R1 Seguros");
@@ -289,43 +323,38 @@ function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
   const metaPA = sumBy(metasAssessor, "Meta PA Seguros");
   const updSeguros = dateMap["R1 Seguros"] || "";
 
-  document.getElementById("segurosBigNumbers").innerHTML = [
+  const reunioesConsorcio = sumBy(rows, "Reuniões Consórcio");
+  const fechamentoConsorcio = sumBy(rows, "Fechamento Consórcio");
+  const metaConsorcio = sumBy(metasAssessor, "Meta Consórcio");
+  const updConsorcio = dateMap["Reuniões Consórcio"] || "";
+
+  document.getElementById("crossSellBigNumbers").innerHTML = [
     bigNumberCard({
       label: "Reuniões de Seguros (R1 + R2)",
       value: r1 + r2, valueStr: fmtNum(r1 + r2),
       meta: metaR1 + metaR2, metaStr: fmtNum(metaR1 + metaR2),
       updated: updSeguros,
-      extraBadge: `<span class="badge pos">R1: ${fmtNum(r1)} · R2: ${fmtNum(r2)}</span>`,
+      note: `R1: <strong style="color:var(--text)">${fmtNum(r1)}</strong> · R2: <strong style="color:var(--text)">${fmtNum(r2)}</strong>`,
     }),
-    simpleNumberCard({ label: "R1 Seguros", valueStr: fmtNum(r1), sub: `Meta: ${fmtNum(metaR1)}`, updated: updSeguros }),
-    simpleNumberCard({ label: "R2 Seguros", valueStr: fmtNum(r2), sub: `Meta: ${fmtNum(metaR2)}`, updated: updSeguros }),
     bigNumberCard({ label: "Apólices Emitidas (P.A.)", value: apoliceEmitida, valueStr: fmtMoney(apoliceEmitida), meta: metaPA, metaStr: fmtMoney(metaPA), updated: updSeguros }),
-  ].join("") + `
-    <div class="card" style="grid-column: span 4;">
-      <div class="updated">atualizado ${updSeguros}</div>
-      <div class="kpi-label">Apólices em Andamento (projeção de fechamento)</div>
-      <div class="kpi-value small">${fmtMoneyFull(apoliceAndamento)}</div>
-    </div>`;
+    simpleNumberCard({ label: "Apólices em Andamento", valueStr: fmtMoney(apoliceAndamento), sub: "Projeção de fechamento", updated: updSeguros }),
+    simpleNumberCard({ label: "Reuniões de Consórcio", valueStr: fmtNum(reunioesConsorcio), updated: updConsorcio }),
+    bigNumberCard({ label: "Fechamentos de Consórcio", value: fechamentoConsorcio, valueStr: fmtMoney(fechamentoConsorcio), meta: metaConsorcio, metaStr: fmtMoney(metaConsorcio), updated: updConsorcio }),
+  ].join("");
 
-  // Consórcio + Ativações
-  const reunioesConsorcio = sumBy(rows, "Reuniões Consórcio");
-  const fechamentoConsorcio = sumBy(rows, "Fechamento Consórcio");
-  const metaConsorcio = sumBy(metasAssessor, "Meta Consórcio");
+  /* ---- Ativações 300k+ ---- */
   const ativPF = sumBy(rows, "Ativação PF 300k+");
   const ativPJ = sumBy(rows, "Ativação PJ 300k+");
   const metaAtivPF = sumBy(metasAssessor, "Meta Ativação PF 300K +");
   const metaAtivPJ = sumBy(metasAssessor, "Meta Ativação PJ 300K +");
-  const updConsorcio = dateMap["Reuniões Consórcio"] || "";
   const updAtivacao = dateMap["Ativação PF 300k+"] || "";
 
-  document.getElementById("consorcioAtivacaoBigNumbers").innerHTML = [
-    simpleNumberCard({ label: "Reuniões de Consórcio", valueStr: fmtNum(reunioesConsorcio), updated: updConsorcio }),
-    bigNumberCard({ label: "Fechamentos de Consórcio", value: fechamentoConsorcio, valueStr: fmtMoney(fechamentoConsorcio), meta: metaConsorcio, metaStr: fmtMoney(metaConsorcio), updated: updConsorcio }),
+  document.getElementById("ativacaoBigNumbers").innerHTML = [
     bigNumberCard({ label: "Ativações 300k+ PF", value: ativPF, valueStr: fmtNum(ativPF), meta: metaAtivPF, metaStr: fmtNum(metaAtivPF), updated: updAtivacao }),
     bigNumberCard({ label: "Ativações 300k+ PJ", value: ativPJ, valueStr: fmtNum(ativPJ), meta: metaAtivPJ, metaStr: fmtNum(metaAtivPJ), updated: updAtivacao }),
   ].join("");
 
-  // Receita por produto
+  /* ---- Receita por produto ---- */
   const produtoColMap = {
     "Renda Fixa": "Receita Renda Fixa",
     "Renda Variável": "Receita Renda Variável",
@@ -348,22 +377,32 @@ function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
   renderChart("chartReceita", "bar", {
     labels: produtos,
     datasets: [
-      { label: "Realizado", data: realizadoArr, backgroundColor: "#d4af37", borderRadius: 6 },
-      { label: "Meta", data: metaArr, backgroundColor: "#2c3145", borderRadius: 6 },
+      { label: "Realizado", data: realizadoArr, backgroundColor: AZUL, borderRadius: 5 },
+      { label: "Meta", data: metaArr, backgroundColor: DOURADO, borderRadius: 5 },
     ],
   }, {
     plugins: {
-      legend: { position: "bottom", labels: { color: "#f2f3f7" } },
+      legend: { position: "bottom", labels: { color: AZUL, font: { weight: "700" } } },
       tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${fmtMoneyFull(ctx.raw)}` } },
-      subtitle: { display: true, text: `Atualizado em ${updReceita}`, color: "#8b8fa3" },
+      subtitle: { display: true, text: `Atualizado em ${updReceita}`, color: "#6b7490", padding: { top: 4 } },
+      datalabels: {
+        color: AZUL,
+        font: { weight: "700", size: 10 },
+        anchor: "end",
+        align: "top",
+        rotation: -90,
+        offset: 6,
+        formatter: (v) => (v ? fmtCompact.format(v) : ""),
+      },
     },
+    layout: { padding: { top: 20 } },
     scales: {
-      y: { ticks: { color: "#8b8fa3", callback: (v) => fmtCompact.format(v) }, grid: { color: "#1a1d29" } },
-      x: { ticks: { color: "#f2f3f7" }, grid: { display: false } },
+      y: { ticks: { color: "#6b7490", callback: (v) => fmtCompact.format(v) }, grid: { color: "#eef0f6" } },
+      x: { ticks: { color: AZUL, font: { weight: "700" } }, grid: { display: false } },
     },
   });
 
-  // Índices de qualidade
+  /* ---- Índices de qualidade + NPS ---- */
   const saudeMedia = avgBy(rows, "Saúde do Cliente");
   const modeloMedia = avgBy(rows, "Modelo de Servir");
   const rupturaSoma = sumBy(rows, "Clientes em Ruptura");
@@ -372,18 +411,14 @@ function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
   const metaRuptura = sumBy(metasAssessor, "Meta Ruptura");
   const updQualidade = dateMap["Saúde do Cliente"] || "";
 
-  document.getElementById("qualidadeBigNumbers").innerHTML = [
-    bigNumberCard({ label: "Saúde do Cliente (média)", value: saudeMedia, valueStr: saudeMedia.toFixed(1), meta: metaSaude, metaStr: metaSaude.toFixed(1), updated: updQualidade }),
-    bigNumberCard({ label: "Modelo de Servir (média)", value: modeloMedia, valueStr: modeloMedia.toFixed(1), meta: metaModelo, metaStr: metaModelo.toFixed(1), updated: updQualidade }),
-    bigNumberCard({ label: "Clientes em Ruptura (soma)", value: rupturaSoma, valueStr: fmtNum(rupturaSoma), meta: metaRuptura, metaStr: fmtNum(metaRuptura), updated: updQualidade, invert: true }),
-  ].join("");
-
-  // NPS
   const npsSemResposta = sumBy(rows, "NPS Sem Resposta");
   const npsRespondidos = sumBy(rows, "NPS Respondidos");
   const updNps = dateMap["NPS Respondidos"] || "";
 
-  document.getElementById("npsBigNumbers").innerHTML = [
+  document.getElementById("qualidadeNpsBigNumbers").innerHTML = [
+    bigNumberCard({ label: "Saúde do Cliente (média)", value: saudeMedia, valueStr: saudeMedia.toFixed(1), meta: metaSaude, metaStr: metaSaude.toFixed(1), updated: updQualidade }),
+    bigNumberCard({ label: "Modelo de Servir (média)", value: modeloMedia, valueStr: modeloMedia.toFixed(1), meta: metaModelo, metaStr: metaModelo.toFixed(1), updated: updQualidade }),
+    bigNumberCard({ label: "Clientes em Ruptura (soma)", value: rupturaSoma, valueStr: fmtNum(rupturaSoma), meta: metaRuptura, metaStr: fmtNum(metaRuptura), updated: updQualidade, invert: true }),
     simpleNumberCard({ label: "NPS — Sem Resposta", valueStr: fmtNum(npsSemResposta), updated: updNps }),
     simpleNumberCard({ label: "NPS — Respondidos", valueStr: fmtNum(npsRespondidos), updated: updNps }),
   ].join("");
