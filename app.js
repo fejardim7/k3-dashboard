@@ -10,7 +10,6 @@ const GIDS = {
   consolidado: "0",
   datas: "287555750",
   metasAssessor: "1776920911",
-  metasProdutos: "1366112441",
 };
 
 const REFRESH_MS = 5 * 60 * 1000; // 5 minutos
@@ -194,11 +193,10 @@ async function loadDashboard() {
   const errorBanner = document.getElementById("errorBanner");
   errorBanner.innerHTML = "";
   try {
-    const [consolidado, datas, metasAssessor, metasProdutos] = await Promise.all([
+    const [consolidado, datas, metasAssessor] = await Promise.all([
       fetchCsv(GIDS.consolidado),
       fetchCsv(GIDS.datas),
       fetchCsv(GIDS.metasAssessor),
-      fetchCsv(GIDS.metasProdutos),
     ]);
 
     const dateMap = {};
@@ -211,7 +209,7 @@ async function loadDashboard() {
     document.getElementById("dateLabel").textContent = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
     renderCaptacao(rows, metasAssessor, dateMap);
-    renderKpis(rows, metasAssessor, metasProdutos, dateMap);
+    renderKpis(rows, metasAssessor, dateMap);
 
     document.getElementById("footerRight").textContent = `Última sincronização: ${new Date().toLocaleTimeString("pt-BR")}`;
   } catch (err) {
@@ -312,7 +310,7 @@ function renderCaptacao(rows, metasAssessor, dateMap) {
 
 /* ---------------- View: KPIs ---------------- */
 
-function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
+function renderKpis(rows, metasAssessor, dateMap) {
   /* ---- Cross Sell: Seguros + Consórcio ---- */
   const r1 = sumBy(rows, "R1 Seguros");
   const r2 = sumBy(rows, "R2 Seguros");
@@ -353,53 +351,6 @@ function renderKpis(rows, metasAssessor, metasProdutos, dateMap) {
     bigNumberCard({ label: "Ativações 300k+ PF", value: ativPF, valueStr: fmtNum(ativPF), meta: metaAtivPF, metaStr: fmtNum(metaAtivPF), updated: updAtivacao }),
     bigNumberCard({ label: "Ativações 300k+ PJ", value: ativPJ, valueStr: fmtNum(ativPJ), meta: metaAtivPJ, metaStr: fmtNum(metaAtivPJ), updated: updAtivacao }),
   ].join("");
-
-  /* ---- Receita por produto ---- */
-  const produtoColMap = {
-    "Renda Fixa": "Receita Renda Fixa",
-    "Renda Variável": "Receita Renda Variável",
-    "Cetipados": "Receita Cetipados",
-    "COE": "Receita COE",
-    "Internacional": "Receita Internacional",
-    "Fundos": "Receita Fundos",
-    "Previdência": "Receita Previdência",
-    "Fee Fixo": "Receita Fee Fixo",
-    "Câmbio": "Receita Câmbio",
-  };
-  const metaProdMap = {};
-  metasProdutos.forEach((r) => (metaProdMap[r["Produto"]] = toNum(r["Meta"])));
-
-  const produtos = Object.keys(produtoColMap);
-  const realizadoArr = produtos.map((p) => sumBy(rows, produtoColMap[p]));
-  const metaArr = produtos.map((p) => metaProdMap[p] || 0);
-  const updReceita = dateMap["Receita Renda Fixa"] || "";
-
-  renderChart("chartReceita", "bar", {
-    labels: produtos,
-    datasets: [
-      { label: "Realizado", data: realizadoArr, backgroundColor: AZUL, borderRadius: 5 },
-      { label: "Meta", data: metaArr, backgroundColor: DOURADO, borderRadius: 5 },
-    ],
-  }, {
-    plugins: {
-      legend: { position: "bottom", labels: { color: AZUL, font: { weight: "700" } } },
-      tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${fmtMoneyFull(ctx.raw)}` } },
-      subtitle: { display: true, text: `Atualizado em ${updReceita}`, color: "#6b7490", padding: { top: 4 } },
-      datalabels: {
-        color: AZUL,
-        font: { weight: "700", size: 10 },
-        anchor: "end",
-        align: "top",
-        offset: 2,
-        formatter: (v) => (v ? fmtCompact.format(v) : ""),
-      },
-    },
-    layout: { padding: { top: 24 } },
-    scales: {
-      y: { ticks: { color: "#6b7490", callback: (v) => fmtCompact.format(v) }, grid: { color: "#eef0f6" } },
-      x: { ticks: { color: AZUL, font: { weight: "700" } }, grid: { display: false } },
-    },
-  });
 
   /* ---- Índices de qualidade + NPS ---- */
   const saudeMedia = avgBy(rows, "Saúde do Cliente");
