@@ -162,8 +162,10 @@ function bigNumberCard({ label, value, valueStr, meta, metaStr, updated, invert 
   const badge = hasMeta ? deltaBadge(value, meta, invert) : extraBadge;
   return `
     <div class="card">
-      ${updated ? `<div class="updated">atualizado ${updated}</div>` : ""}
-      <div class="kpi-label">${label}</div>
+      <div class="card-head">
+        <div class="kpi-label">${label}</div>
+        ${updated ? `<span class="updated">atualizado ${updated}</span>` : ""}
+      </div>
       <div class="kpi-value">${valueStr}</div>
       <div class="kpi-meta-row">
         ${hasMeta ? `<span>Meta: <strong style="color:var(--text)">${metaStr}</strong></span>` : ""}
@@ -180,8 +182,10 @@ function bigNumberCard({ label, value, valueStr, meta, metaStr, updated, invert 
 function simpleNumberCard({ label, valueStr, sub = "", updated }) {
   return `
     <div class="card">
-      ${updated ? `<div class="updated">atualizado ${updated}</div>` : ""}
-      <div class="kpi-label">${label}</div>
+      <div class="card-head">
+        <div class="kpi-label">${label}</div>
+        ${updated ? `<span class="updated">atualizado ${updated}</span>` : ""}
+      </div>
       <div class="kpi-value small">${valueStr}</div>
       ${sub ? `<div class="kpi-meta-row">${sub}</div>` : ""}
     </div>`;
@@ -268,14 +272,18 @@ function renderCaptacao(rows, metasAssessor, dateMap) {
     labels: ["PF", "PJ"],
     datasets: [{ data: [capPF, capPJ], backgroundColor: [AZUL, DOURADO], borderRadius: 8 }],
   }, {
+    clip: false,
+    layout: { padding: { top: 34, bottom: 34 } },
     plugins: {
       legend: { display: false },
       tooltip: { callbacks: { label: (ctx) => ` ${fmtMoneyFull(ctx.raw)}` } },
       datalabels: {
+        clip: false,
         color: AZUL,
         font: { weight: "700", size: 13 },
         anchor: "end",
         align: (ctx) => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+        offset: 6,
         formatter: (v) => fmtMoney(v),
       },
     },
@@ -285,19 +293,32 @@ function renderCaptacao(rows, metasAssessor, dateMap) {
     },
   });
 
-  // Chart: PME/Middle vs Corporate
+  // Chart: PME/Middle vs Corporate — base diferente, com data de atualização própria
+  const dPme = dateMap["Cap. Onshore PME Middle"] || "";
+  const dCorp = dateMap["Cap. Onshore Corporate"] || "";
+  const updPmeCorp = dPme && dCorp && dPme !== dCorp ? `PME/Middle: ${dPme} · Corporate: ${dCorp}` : (dPme || dCorp);
+  const updPjSplitEl = document.getElementById("updPjSplit");
+  if (updPjSplitEl) {
+    updPjSplitEl.textContent = updPmeCorp ? `atualizado ${updPmeCorp}` : "";
+    updPjSplitEl.style.display = updPmeCorp ? "" : "none";
+  }
+
   renderChart("chartPjSplit", "bar", {
     labels: ["PME/Middle", "Corporate"],
     datasets: [{ data: [pmeMiddle, corporate], backgroundColor: [AZUL, DOURADO], borderRadius: 8 }],
   }, {
+    clip: false,
+    layout: { padding: { top: 34, bottom: 34 } },
     plugins: {
       legend: { display: false },
       tooltip: { callbacks: { label: (ctx) => ` ${fmtMoneyFull(ctx.raw)}` } },
       datalabels: {
+        clip: false,
         color: AZUL,
         font: { weight: "700", size: 13 },
         anchor: "end",
         align: (ctx) => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+        offset: 6,
         formatter: (v) => fmtMoney(v),
       },
     },
